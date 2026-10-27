@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Морской бой — тактики</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --ink: #1d232b; --muted: #6b7480; --line: #dde1e6;
+    --accent: #2563eb; --miss: #cfd6df; --hit: #e5484d; --sunk: #7c2d12; --ship: #3b82f6; --good: #16a34a; --bad: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --ink: #e6e9ee; --muted: #8b95a3; --line: #2a3038;
+      --accent: #60a5fa; --miss: #3a424c; --hit: #f87171; --sunk: #b45309; --ship: #3b82f6; --good: #4ade80; --bad: #f87171;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --ink: #e6e9ee; --muted: #8b95a3; --line: #2a3038;
+    --accent: #60a5fa; --miss: #3a424c; --hit: #f87171; --sunk: #b45309; --ship: #3b82f6; --good: #4ade80; --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; max-width: 1100px; margin: 12px auto 0; padding: 0 16px; }
+  nav button { background: none; border: 1px solid var(--line); color: var(--muted); padding: 7px 14px; border-radius: 8px; cursor: pointer; font: inherit; }
+  nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  main { max-width: 1100px; margin: 14px auto 40px; padding: 0 16px; }
+  section { display: none; }
+  section.active { display: block; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  select, input[type=number] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 200px; }
+  input[type=number] { min-width: 110px; }
+  button.primary, button.ghost { font: inherit; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--accent); }
+  button.primary { background: var(--accent); color: #fff; }
+  button.ghost { background: none; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .desc { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+  .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; width: min(440px, 100%); }
+  .cell { aspect-ratio: 1; background: var(--miss); border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); }
+  .cell.unknown { background: var(--line); opacity: .55; }
+  .cell.hit { background: var(--hit); color: #fff; font-weight: 700; }
+  .cell.sunk { background: var(--sunk); color: #fff; font-weight: 700; }
+  .cell.ship { background: var(--ship); opacity: .75; }
+  .cell.last { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 14px; }
+  .stats b { font-size: 18px; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .log { font-size: 13px; color: var(--muted); margin-top: 8px; min-height: 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  .bar { height: 10px; background: var(--accent); border-radius: 4px; min-width: 2px; }
+  .barcell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .heat { font-variant-numeric: tabular-nums; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+  .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; width: 100%; margin-top: 10px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  svg text { fill: var(--muted); font-size: 11px; }
+  svg .axis { stroke: var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Морской бой: тактики атаки</h1>
+  <p>Симулятор поля 10×10, флот 5-4-3-3-2 (17 клеток). Цель — минимум выстрелов до полной победы.</p>
+</header>
+<nav>
+  <button data-tab="replay" class="active">Реплей партии</button>
+  <button data-tab="run">Запуск турнира</button>
+  <button data-tab="results">Результаты</button>
+</nav>
+<main>
+
+<section id="tab-replay" class="active">
+  <div class="panel">
+    <div class="row">
+      <label class="field">Тактика
+        <select id="rp-attacker"></select></label>
+      <label class="field">Расстановка защитника
+        <select id="rp-placement"></select></label>
+      <label class="field">Seed партии
+        <input type="number" id="rp-seed" min="0" value="0"></label>
+      <div class="controls" style="margin-top:20px">
+        <button class="ghost" id="rp-prev">◀</button>
+        <button class="primary" id="rp-play">▶ Играть</button>
+        <button class="ghost" id="rp-next">▶|</button>
+        <button class="ghost" id="rp-end">В конец</button>
+        <button class="ghost" id="rp-reroll">Новый seed</button>
+      </div>
+    </div>
+    <p class="desc" id="rp-desc"></p>
+  </div>
+  <div class="panel">
+    <div class="row" style="gap:28px">
+      <div>
+        <div class="board" id="rp-board"></div>
+        <div class="log" id="rp-log"></div>
+      </div>
+      <div style="flex:1; min-width:220px">
+        <div class="stats">
+          <div><div class="muted">Выстрелов</div><b id="rp-shots">0</b></div>
+          <div><div class="muted">Осталось клеток</div><b id="rp-left">17</b></div>
+          <div><div class="muted">Ход</div><b id="rp-step">0</b></div>
+        </div>
+        <div class="controls">
+          <label class="muted"><input type="checkbox" id="rp-reveal"> показать флот защитника</label>
+        </div>
+        <p class="muted" style="margin-top:14px">
+          Серые — неизвестно, красные — попадание, тёмные — потоплено, синие — корабли защитника (если открыто).
+          Тёмная рамка — последний выстрел.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-run">
+  <div class="panel">
+    <h2>Какие тактики и расстановки сравнивать</h2>
+    <div class="row" style="gap:28px">
+      <div style="flex:2; min-width:260px">
+        <div class="muted" style="margin-bottom:6px">Тактики атаки</div>
+        <div class="checks" id="run-attackers"></div>
+      </div>
+      <div style="flex:1; min-width:200px">
+        <div class="muted" style="margin-bottom:6px">Расстановки защитника</div>
+        <div class="checks" id="run-placements"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px; align-items:flex-end">
+      <label class="field">Партий на каждую пару (тактика × расстановка)
+        <input type="number" id="run-games" min="1" max="5000" value="500"></label>
+      <label class="field">Первый seed
+        <input type="number" id="run-offset" min="0" value="0"></label>
+      <button class="primary" id="run-go">Запустить</button>
+      <span class="muted" id="run-est"></span>
+    </div>
+    <div class="progress"><div id="run-bar"></div></div>
+    <p class="muted" id="run-status" style="margin-bottom:0"></p>
+  </div>
+  <div class="panel muted">
+    Все тактики играют одни и те же расстановки (seed общий), поэтому сравнения парные.
+    Прогон сохраняется в <code>results/tournament.json</code>. Полный прогон по умолчанию — 12 тактик × 5 расстановок × 500 партий.
+  </div>
+</section>
+
+<section id="tab-results">
+  <div class="panel">
+    <div class="row" style="align-items:flex-end">
+      <label class="field">Расстановка для ранжирования
+        <select id="res-placement"></select></label>
+      <label class="field">Тактика для гистограммы
+        <select id="res-hist"></select></label>
+      <label class="field">Сравнить тактику
+        <select id="res-a"></select></label>
+      <label class="field">с
+        <select id="res-b"></select></label>
+      <button class="ghost" id="res-reload">Обновить из файла</button>
+    </div>
+    <p class="muted" id="res-meta"></p>
+  </div>
+
+  <div class="panel">
+    <h2>Рейтинг тактик (меньше — лучше)</h2>
+    <div class="scroll"><table id="res-rank"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Средние выстрелы: тактика × расстановка защитника</h2>
+    <div class="scroll"><table id="res-matrix"></table></div>
+    <p class="muted">Ячейка окрашена по среднему: зелёный — лучше среднего по строке.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Распределение числа выстрелов</h2>
+    <svg id="res-svg" viewBox="0 0 700 260" width="100%" style="max-width:700px"></svg>
+  </div>
+
+  <div class="panel">
+    <h2>Парное сравнение</h2>
+    <div id="res-pair"></div>
+  </div>
+</section>
+
+</main>
+<script>
+const state = { meta: null, payload: null, summary: null, replay: null, step: 0, timer: null };
+const $ = (id) => document.getElementById(id);
+const api = async (url, opts) => {
+  const r = await fetch(url, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+};
+const fmt = (x, d = 1) => (x === undefined || x === null || Number.isNaN(x)) ? "—" : Number(x).toFixed(d);
+
+// ---------- вкладки ----------
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+function showTab(name) {
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll("section").forEach((s) => s.classList.toggle("active", s.id === "tab-" + name));
+  if (name === "results") loadResults();
+}
+
+// ---------- реплей ----------
+function fillSelect(sel, items, valueKey = "name", labelKey = "title") {
+  sel.innerHTML = items.map((x) => `<option value="${x[valueKey]}">${x[labelKey]}</option>`).join("");
+}
+async function loadReplay() {
+  const q = new URLSearchParams({
+    attacker: $("rp-attacker").value,
+    placement: $("rp-placement").value,
+    seed: $("rp-seed").value || "0",
+  });
+  state.replay = await api("/api/replay?" + q);
+  state.step = 0;
+  const a = state.meta.attackers.find((x) => x.name === state.replay.attacker);
+  $("rp-desc").textContent = a.description;
+  stopTimer();
+  drawReplay();
+}
+function drawReplay() {
+  const rp = state.replay;
+  const shot = new Array(100).fill(null);   // исход выстрела в клетку
+  let last = -1;
+  rp.moves.slice(0, state.step).forEach(([r, c, o]) => { shot[r * 10 + c] = o; last = r * 10 + c; });
+  const grid = shot.map((o) => o === null ? "unknown" : o === "miss" ? "miss" : o === "hit" ? "hit" : "sunk");
+  // корабль потоплен, когда все его клетки уже обстреляны
+  rp.ships.forEach((ship) => {
+    const cells = ship.map(([r, c]) => r * 10 + c);
+    if (cells.every((k) => shot[k] !== null)) cells.forEach((k) => grid[k] = "sunk");
+  });
+  const shipCells = new Set(rp.ships.flat().map(([r, c]) => r * 10 + c));
+  const reveal = $("rp-reveal").checked;
+  let html = "";
+  for (let i = 0; i < 100; i++) {
+    const cls = grid[i] === "unknown" && reveal && shipCells.has(i) ? "ship" : grid[i];
+    html += `<div class="cell ${cls}${i === last ? " last" : ""}">${grid[i] === "miss" ? "•" : ""}</div>`;
+  }
+  $("rp-board").innerHTML = html;
+  const hits = shot.filter((o) => o && o !== "miss").length;
+  const shown = state.step, total = rp.shots;
+  $("rp-shots").textContent = `${shown} / ${total}`;
+  $("rp-step").textContent = shown;
+  $("rp-left").textContent = 17 - hits;
+  $("rp-log").textContent = shown
+    ? describe(rp.moves[shown - 1]) + (shown === total ? " — победа" : "")
+    : "Нажмите «Играть» или «▶|».";
+}
+function describe([r, c, o]) {
+  const name = { miss: "промах", hit: "попадание", sunk: "корабль потоплен" }[o];
+  return `Выстрел в ${"абвгдежзик"[c]}${r + 1}: ${name}`;
+}
+function stepTo(n) {
+  state.step = Math.max(0, Math.min(state.replay.shots, n));
+  drawReplay();
+}
+function stopTimer() { if (state.timer) { clearInterval(state.timer); state.timer = null; $("rp-play").textContent = "▶ Играть"; } }
+$("rp-play").onclick = () => {
+  if (state.timer) return stopTimer();
+  if (state.step >= state.replay.shots) stepTo(0);
+  $("rp-play").textContent = "⏸ Пауза";
+  state.timer = setInterval(() => {
+    if (state.step >= state.replay.shots) return stopTimer();
+    stepTo(state.step + 1);
+  }, 180);
+};
+$("rp-next").onclick = () => { stopTimer(); stepTo(state.step + 1); };
+$("rp-prev").onclick = () => { stopTimer(); stepTo(state.step - 1); };
+$("rp-end").onclick = () => { stopTimer(); stepTo(state.replay.shots); };
+$("rp-reroll").onclick = () => { $("rp-seed").value = Math.floor(Math.random() * 100000); loadReplay(); };
+$("rp-reveal").onchange = drawReplay;
+["rp-attacker", "rp-placement"].forEach((id) => $(id).onchange = loadReplay);
+$("rp-seed").onchange = loadReplay;
+
+// ---------- запуск турнира ----------
+let runTimer = null;
+function renderRunForm() {
+  $("run-attackers").innerHTML = state.meta.attackers.map((a) =>
+    `<label title="${a.description}"><input type="checkbox" value="${a.name}" checked> ${a.title}</label>`).join("");
+  $("run-placements").innerHTML = state.meta.placements.map((p) =>
+    `<label><input type="checkbox" value="${p.name}" ${p.name === "random" ? "checked" : ""}> ${p.title}</label>`).join("");
+  const update = () => {
+    const na = document.querySelectorAll("#run-attackers input:checked").length;
+    const np = document.querySelectorAll("#run-placements input:checked").length;
+    const g = +$("run-games").value || 0;
+    $("run-est").textContent = `${na} × ${np} × ${g} = ${na * np * g} партий`;
+  };
+  document.querySelectorAll(".checks input, #run-games").forEach((el) => el.oninput = el.onchange = update);
+  update();
+}
+$("run-go").onclick = async () => {
+  const attackers = [...document.querySelectorAll("#run-attackers input:checked")].map((x) => x.value);
+  const placements = [...document.querySelectorAll("#run-placements input:checked")].map((x) => x.value);
+  const games = +$("run-games").value;
+  const offset = +$("run-offset").value || 0;
+  if (!attackers.length || !placements.length) return alert("Выберите хотя бы одну тактику и расстановку");
+  $("run-go").disabled = true;
+  try {
+    const job = await api("/api/tournament", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attackers, placements, games, offset }),
+    });
+    runTimer = setInterval(() => pollJob(job.id), 500);
+    pollJob(job.id);
+  } catch (e) { $("run-status").textContent = "Ошибка: " + e.message; $("run-go").disabled = false; }
+};
+async function pollJob(id) {
+  const job = await api("/api/job/" + id);
+  const pct = job.total ? (100 * job.done / job.total) : 0;
+  $("run-bar").style.width = pct + "%";
+  $("run-status").textContent = job.state === "running"
+    ? `Идёт прогон: ${job.done} / ${job.total}`
+    : job.state === "done" ? `Готово: ${job.done || job.total} партий → ${job.file}`
+    : `Ошибка: ${job.error}`;
+  if (job.state !== "running") {
+    clearInterval(runTimer);
+    $("run-go").disabled = false;
+    if (job.state === "done") await loadResults(true);
+  }
+}
+
+// ---------- результаты ----------
+let resultsLoaded = false;
+async function loadResults(force) {
+  if (resultsLoaded && !force) return;
+  const data = await api("/api/results");
+  if (!data.payload) { $("res-meta").textContent = "Пока нет результатов. Запустите турнир."; return; }
+  state.payload = data.payload;
+  state.summary = data.summary;
+  resultsLoaded = true;
+  const m = data.payload.meta;
+  $("res-meta").textContent = `Партий на пару: ${m.games}, seed с ${m.offset}. Создано: ${m.created}`;
+  renderResults();
+}
+function placementList() {
+  return Object.keys(state.payload.placements);
+}
+function renderResults() {
+  const P = state.payload, S = state.summary;
+  const attackers = Object.keys(S);
+  const placements = placementList();
+  const names = Object.fromEntries(state.meta.attackers.map((a) => [a.name, a.title]));
+  const rankSel = $("res-placement");
+  if (!rankSel.options.length) {
+    rankSel.innerHTML = placements.map((p) => `<option value="${p}">${P.placements[p]}</option>`).join("");
+    $("res-hist").innerHTML = attackers.map((a) => `<option value="${a}">${names[a]}</option>`).join("");
+    $("res-a").innerHTML = attackers.map((a) => `<option value="${a}">${names[a]}</option>`).join("");
+    $("res-b").innerHTML = attackers.map((a) => `<option value="${a}">${names[a]}</option>`).join("");
+    $("res-b").selectedIndex = Math.min(1, attackers.length - 1);
+    rankSel.onchange = renderResults; $("res-hist").onchange = renderResults;
+    $("res-a").onchange = renderResults; $("res-b").onchange = renderResults;
+  }
+  const p = rankSel.value || placements[0];
+
+  // рейтинг по выбранной расстановке
+  const rank = attackers.map((a) => ({ a, ...S[a][p] })).sort((x, y) => x.mean - y.mean);
+  const maxMean = Math.max(...rank.map((r) => r.mean));
+  $("res-rank").innerHTML = `<thead><tr><th>Тактика</th><th>Среднее</th><th>±95%</th><th>Медиана</th><th>p10</th><th>p90</th><th>Макс.</th><th style="width:30%"></th></tr></thead>
+  <tbody>${rank.map((r, i) => `<tr>
+    <td>${i === 0 ? "🥇 " : ""}${names[r.a]}</td>
+    <td class="heat"><b>${fmt(r.mean)}</b></td>
+    <td class="muted">±${fmt(r.ci95, 2)}</td>
+    <td>${fmt(r.median, 0)}</td><td>${fmt(r.p10, 0)}</td><td>${fmt(r.p90, 0)}</td><td>${fmt(r.max, 0)}</td>
+    <td><div class="barcell"><div class="bar" style="width:${(100 * r.mean / maxMean).toFixed(1)}%"></div></div></td>
+  </tr>`).join("")}</tbody>`;
+
+  // матрица тактика × расстановка
+  const all = {};
+  attackers.forEach((a) => placements.forEach((pp) => all[a + "|" + pp] = S[a][pp].mean));
+  $("res-matrix").innerHTML = `<thead><tr><th>Тактика</th>${placements.map((pp) => `<th>${P.placements[pp]}</th>`).join("")}</tr></thead>
+  <tbody>${attackers.map((a) => {
+    const vals = placements.map((pp) => S[a][pp].mean);
+    const row = vals.reduce((s, v) => s + v, 0) / vals.length;
+    return `<tr><td>${names[a]}</td>${vals.map((v) => {
+      const d = v - row;
+      const color = Math.abs(d) < 0.5 ? "" : d < 0 ? "color:var(--good)" : "color:var(--bad)";
+      return `<td class="heat" style="${color}">${fmt(v)}</td>`;
+    }).join("")}</tr>`;
+  }).join("")}</tbody>`;
+
+  renderHistogram(state.payload.results[$("res-hist").value || attackers[0]][p], names[$("res-hist").value || attackers[0]], P.placements[p]);
+  renderPair(p, names);
+}
+function renderHistogram(values, title, placementTitle) {
+  const svg = $("res-svg");
+  if (!values) return;
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const bins = [];
+  for (let s = lo; s <= hi; s++) bins.push(0);
+  values.forEach((v) => bins[v - lo]++);
+  const W = 700, H = 260, pad = 36;
+  const bw = (W - 2 * pad) / bins.length;
+  const top = Math.max(...bins);
+  let g = "";
+  bins.forEach((n, i) => {
+    const h = (H - 2 * pad) * n / top;
+    const x = pad + i * bw, y = H - pad - h;
+    g += `<rect x="${x + 1}" y="${y}" width="${Math.max(bw - 2, 1)}" height="${h}" fill="var(--accent)" opacity=".85"><title>${lo + i} выстр.: ${n}</title></rect>`;
+  });
+  const mean = values.reduce((s, v) => s + v, 0) / values.length;
+  const mx = pad + (mean - lo) / Math.max(hi - lo, 1) * (W - 2 * pad);
+  g += `<line x1="${mx}" x2="${mx}" y1="${pad}" y2="${H - pad}" stroke="var(--bad)" stroke-dasharray="4 3"/>`;
+  g += `<text x="${mx + 4}" y="${pad + 10}">среднее ${fmt(mean)}</text>`;
+  g += `<line class="axis" x1="${pad}" x2="${W - pad}" y1="${H - pad}" y2="${H - pad}"/>`;
+  g += `<text x="${pad}" y="${H - pad + 16}">${lo}</text><text x="${W - pad - 20}" y="${H - pad + 16}">${hi}</text>`;
+  g += `<text x="${pad}" y="16">${title} — ${placementTitle}: число выстрелов до победы (n=${values.length})</text>`;
+  svg.innerHTML = g;
+}
+function renderPair(p, names) {
+  const a = $("res-a").value, b = $("res-b").value;
+  const va = state.payload.results[a][p], vb = state.payload.results[b][p];
+  const diffs = va.map((x, i) => x - vb[i]);
+  const n = diffs.length;
+  const mean = diffs.reduce((s, v) => s + v, 0) / n;
+  const sd = Math.sqrt(diffs.reduce((s, v) => s + (v - mean) ** 2, 0) / n);
+  const ci = 1.96 * sd / Math.sqrt(n);
+  const aWins = diffs.filter((d) => d < 0).length / n;
+  const bWins = diffs.filter((d) => d > 0).length / n;
+  const cls = Math.abs(mean) <= ci ? "muted" : mean < 0 ? "good" : "bad";
+  const verdict = Math.abs(mean) <= ci
+    ? "разница статистически не отличима от нуля"
+    : `${mean < 0 ? names[a] : names[b]} в среднем быстрее`;
+  $("res-pair").innerHTML = `
+    <p>Разница выстрелов (${names[a]} − ${names[b]}), парно по ${n} партиям:
+      <b class="${cls}">${fmt(mean, 2)} ± ${fmt(ci, 2)}</b> — ${verdict}.</p>
+    <p class="muted">Доля партий, где выигрывает первая тактика: ${fmt(100 * aWins, 1)}%;
+      вторая: ${fmt(100 * bWins, 1)}%; ничья: ${fmt(100 * (1 - aWins - bWins), 1)}%.</p>`;
+}
+$("res-reload").onclick = () => loadResults(true);
+
+// ---------- старт ----------
+(async function init() {
+  state.meta = await api("/api/meta");
+  fillSelect($("rp-attacker"), state.meta.attackers);
+  fillSelect($("rp-placement"), state.meta.placements);
+  renderRunForm();
+  await loadReplay();
+})();
+</script>
+</body>
+</html>
