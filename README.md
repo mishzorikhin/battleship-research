@@ -20,6 +20,12 @@ python3 -m battleship tournament --games 1000 --out results/tournament.json
 # markdown-отчёт по сохранённому прогону
 python3 -m battleship.report results/tournament.json > results/report.md
 
+# поиск лучшей расстановки против PD (результат — results/best_layout_pd_hint.json)
+python3 -m battleship.search pd_hint
+
+# maximin-расстановка по набору тактик
+python3 -m battleship.search robust pd_hint pd_plain parity_hunt random_hunt sonar_hunt lattice_hunt pd_edge_prior pd_center_prior pd_parity
+
 # тесты
 python3 -m unittest discover -s tests -v
 ```
@@ -31,6 +37,7 @@ python3 -m unittest discover -s tests -v
 | `battleship/engine.py` | поле, флот, ход партии (`play`), журнал выстрелов |
 | `battleship/strategies.py` | тактики атаки и их сборка (idle-политика + добивание) |
 | `battleship/placements.py` | стратегии расстановки защитника |
+| `battleship/search.py` | поиск расстановки флота: против одной тактики или maximin по набору |
 | `battleship/tournament.py` | многопроцессный прогон, сводная статистика, парные разности |
 | `battleship/report.py` | markdown-отчёт |
 | `battleship/server.py` | HTTP API и отдача UI (только stdlib) |
