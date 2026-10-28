@@ -26,6 +26,9 @@ python3 -m battleship.search pd_hint
 # maximin-расстановка по набору тактик
 python3 -m battleship.search robust pd_hint pd_plain parity_hunt random_hunt sonar_hunt lattice_hunt pd_edge_prior pd_center_prior pd_parity
 
+# картинки (тепловые карты и графики; нужен matplotlib) -> results/figures/
+python3 -m battleship.figures
+
 # тесты
 python3 -m unittest discover -s tests -v
 ```
@@ -40,6 +43,7 @@ python3 -m unittest discover -s tests -v
 | `battleship/search.py` | поиск расстановки флота: против одной тактики или maximin по набору |
 | `battleship/tournament.py` | многопроцессный прогон, сводная статистика, парные разности |
 | `battleship/report.py` | markdown-отчёт |
+| `battleship/figures.py` | картинки: тепловые карты, матрица, рейтинг, распределения (matplotlib) |
 | `battleship/server.py` | HTTP API и отдача UI (только stdlib) |
 | `web/index.html` | одностраничный UI без внешних зависимостей |
 | `results/legacy_touching_allowed/` | прежнее исследование, где корабли могли касаться |
