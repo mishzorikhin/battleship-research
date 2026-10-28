@@ -10,7 +10,7 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from .engine import MISS, HIT, SUNK, UNKNOWN, N_CELLS, SIZE, PLACEMENTS, rc, inside
+from .engine import MISS, HIT, SUNK, UNKNOWN, N_CELLS, NEIGHBOURS8, SIZE, PLACEMENTS, rc, inside
 
 DIRS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 CENTER = (SIZE - 1) / 2
@@ -237,8 +237,9 @@ MC_MAX_ATTEMPTS = 1500
 def _sample_fleets(grid, remaining, rng):
     """Случайные расстановки оставшихся кораблей, совместимые с наблюдением.
 
-    Совместимость: не накрывают промахи и потопленные корабли, и накрывают
-    все подбитые клетки (они принадлежат ещё не потопленным кораблям).
+    Совместимость: не накрывают промахи и потопленные корабли, не касаются друг
+    друга и накрывают все подбитые клетки (они принадлежат ещё не потопленным
+    кораблям).
     """
     hits = [i for i in range(N_CELLS) if grid[i] == HIT]
     lengths = sorted(remaining, reverse=True)
@@ -258,13 +259,17 @@ def _sample_fleets(grid, remaining, rng):
     while len(samples) < MC_SAMPLES and attempts < MC_MAX_ATTEMPTS:
         attempts += 1
         occupied = set()
+        blocked = set()
         ok = True
         for length in lengths:
             placed = False
             for _ in range(40):
                 cells = rng.choice(valid[length])
-                if not any(i in occupied for i in cells):
-                    occupied.update(cells)
+                if not any(i in blocked for i in cells):
+                    for i in cells:
+                        occupied.add(i)
+                        blocked.add(i)
+                        blocked.update(NEIGHBOURS8[i])
                     placed = True
                     break
             if not placed:

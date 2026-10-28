@@ -36,7 +36,7 @@ def replay(attacker, placement, seed):
         "seed": seed,
         "shots": shots,
         "ships": [_cells(s) for s in layout.ships],
-        "moves": [[*rc(i), outcome] for i, outcome in log],
+        "moves": [[*rc(i), outcome, _cells(inferred)] for i, outcome, inferred in log],
     }
 
 

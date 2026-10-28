@@ -9,7 +9,7 @@ import multiprocessing as mp
 import random
 import statistics
 
-from .engine import FLEET, PLACEMENTS, Layout, play
+from .engine import FLEET, NEIGHBOURS8, PLACEMENTS, Layout, play
 from .placements import random_layout
 from .strategies import ATTACKERS
 
@@ -23,10 +23,17 @@ def evaluate(ships, attacker, seeds):
 
 
 def mutate(ships, rng):
-    """Переставить один корабль в другое место, не пересекаясь с остальными."""
+    """Переставить один корабль в другое место, не касаясь остальных."""
     k = rng.randrange(len(ships))
-    others = {i for j, s in enumerate(ships) if j != k for i in s}
-    cands = [p for p in PLACEMENTS[len(ships[k])] if not any(i in others for i in p)]
+    blocked = set()
+    for j, s in enumerate(ships):
+        if j != k:
+            for i in s:
+                blocked.add(i)
+                blocked.update(NEIGHBOURS8[i])
+    cands = [p for p in PLACEMENTS[len(ships[k])] if not any(i in blocked for i in p)]
+    if not cands:
+        return ships
     new = list(ships)
     new[k] = rng.choice(cands)
     return tuple(new)
